@@ -1,5 +1,6 @@
 1. Configuration: docker-compose.yml
-(This setup removes the Zookeeper dependency, using the modern KRaft protocol for better performance and simpler architecture.)
+(This setup removes the Zookeeper dependency, 
+using the modern KRaft protocol for better performance and simpler architecture.)
 
 services:
   kafka:
@@ -46,7 +47,7 @@ docker compose ps
 
 ### STEP 3: Initialize the data stream (Topic)
 
-# --partitions 3: Splitting data into 3 logs for parallel consumption
+# --partitions 3: Splitting data into 3 logsW for parallel consumption
 # --replication-factor 1: Single copy (appropriate for local dev)
 docker exec kafka-broker /opt/kafka/bin/kafka-topics.sh --create \
   --topic weather_data \
