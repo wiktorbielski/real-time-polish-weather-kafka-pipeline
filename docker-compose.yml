@@ -1,22 +1,37 @@
+version: '3.8'
+
 services:
   kafka:
     image: apache/kafka:3.8.0
     container_name: kafka-broker
     ports:
-      - "9092:9092"
+      - "9092:9092"          # tylko port dla hosta (Windows)
     environment:
-      # Cluster Configuration (KRaft)
+      # === KRaft + single node ===
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      # Internal networking: Use service name 'kafka' for other containers
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # Storage and Replication
-      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      # === Listenery (na czym Kafka słucha) ===
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
+
+      # === Advertised listeners (co Kafka mówi klientom) ===
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+
+      # === Controller (wewnętrzny) ===
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
+
+      # === Komunikacja broker-broker (dla jednego brokera wystarczy DOCKER) ===
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -24,8 +39,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Connect UI to the broker service defined above
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093   # <-- ZMIANA! używamy wewnętrznego listenera DOCKER
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
