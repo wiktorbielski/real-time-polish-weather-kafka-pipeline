@@ -1,0 +1,59 @@
+1. Configuration: docker-compose.yml
+(This setup removes the Zookeeper dependency, using the modern KRaft protocol for better performance and simpler architecture.)
+
+services:
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: kafka-broker
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft Role Configuration
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Storage & Topic Defaults
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+
+2. Execution: Terminal Commands
+(Copy and run these in sequence to deploy and configure your cluster.)
+
+### STEP 1: Launch the containers
+
+# -d runs in detached mode (background)
+docker compose up -d
+
+### STEP 2: Verify health status
+
+# Check that STATUS is "Up" for both 'kafka-broker' and 'kafka-ui'
+docker compose ps
+
+### STEP 3: Initialize the data stream (Topic)
+
+# --partitions 3: Splitting data into 3 logs for parallel consumption
+# --replication-factor 1: Single copy (appropriate for local dev)
+docker exec kafka-broker /opt/kafka/bin/kafka-topics.sh --create \
+  --topic weather_data \
+  --bootstrap-server localhost:9092 \
+  --partitions 3 \
+  --replication-factor 1
+
+### STEP 4: Confirm creation 
+# Lists all active topics on the broker
+docker exec kafka-broker /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092

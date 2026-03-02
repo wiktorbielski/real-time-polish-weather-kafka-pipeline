@@ -22,7 +22,7 @@ consumer = KafkaConsumer(TOPIC,
                          auto_offset_commit=True)
 
 batch = []
-batch_size = 10  # Ładuj co 10 wiadomości
+batch_size = 10 
 
 for message in consumer:
     data = message.value
