@@ -5,32 +5,29 @@ from kafka import KafkaConsumer
 from google.cloud import bigquery
 from dotenv import load_dotenv
 
-# Load configuration from .env file
 load_dotenv()
 
-# Kafka Settings
+# Kafka
 BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
 TOPIC = os.getenv('KAFKA_TOPIC')
 
-# GCP Settings
+# GCP
 GCP_PROJECT_ID = os.getenv('GCP_PROJECT_ID')
 GCP_SERVICE_ACCOUNT_KEY_PATH = os.getenv('GCP_SERVICE_ACCOUNT_KEY_PATH')
 
-# Configure BigQuery Client
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = GCP_SERVICE_ACCOUNT_KEY_PATH
+
 client = bigquery.Client(project=GCP_PROJECT_ID)
 table_id = f"{GCP_PROJECT_ID}.weather_dataset.raw_weather"
 
 BATCH_SIZE_THRESHOLD = 10
 
-# Pola wysyłane przez producenta
 REQUIRED_FIELDS = [
     'city', 'temperature', 'humidity',
     'weather_main', 'weather_description',
-    'wind_speed', 'api_timestamp', 'ingestion_timestamp'c
+    'wind_speed', 'api_timestamp', 'ingestion_timestamp'
 ]
 
-# Initialize Kafka Consumer
 consumer = KafkaConsumer(
     TOPIC,
     bootstrap_servers=BOOTSTRAP_SERVERS,
@@ -42,15 +39,17 @@ consumer = KafkaConsumer(
 
 
 def validate_record(record: dict) -> bool:
-    """Sprawdza czy rekord zawiera wymagane pola i ma poprawną temperaturę."""
+    """
+    Checks if record contains required fields and has a valid temperature.
+    Missing fields are filled with None instead of rejecting the record.
+    """
     if record.get('temperature') is None:
-        print(f"⚠️  Odrzucono rekord bez temperatury: {record.get('city', 'UNKNOWN')}")
+        print(f"[SKIP] Record rejected - missing temperature: {record.get('city', 'UNKNOWN')}")
         return False
 
     missing = [f for f in REQUIRED_FIELDS if f not in record]
     if missing:
-        print(f"⚠️  Rekord dla {record.get('city')} brakuje pól: {missing}")
-        # Nie odrzucamy — uzupełniamy brakujące pola jako None
+        print(f"[WARN] Record for {record.get('city')} is missing fields: {missing}. Filling with None.")
         for field in missing:
             record[field] = None
 
@@ -58,22 +57,22 @@ def validate_record(record: dict) -> bool:
 
 
 def upload_batch(batch: list) -> bool:
-    """Wysyła batch do BigQuery. Zwraca True przy sukcesie."""
-    print(f"📤 Wysyłam batch {len(batch)} rekordów do BigQuery...")
+    """Sends a batch of records to BigQuery. Returns True on success."""
+    print(f"[UPLOAD] Sending {len(batch)} records to BigQuery...")
     try:
         errors = client.insert_rows_json(table_id, batch)
         if not errors:
-            print(f"✅ Batch załadowany pomyślnie do: {table_id}")
+            print(f"[OK] Batch successfully loaded to: {table_id}")
             return True
         else:
-            print(f"❌ Błędy podczas insertu do BigQuery: {errors}")
+            print(f"[ERROR] BigQuery insert errors: {errors}")
             return False
     except Exception as e:
-        print(f"❌ Wyjątek podczas uploadu do BigQuery: {type(e).__name__}: {e}")
+        print(f"[ERROR] Exception during BigQuery upload: {type(e).__name__}: {e}")
         return False
 
 
-print(f"--- Uruchomiono Consumer: nasłuchiwanie na '{TOPIC}' ---")
+print(f"[START] Consumer listening on topic: '{TOPIC}'")
 
 data_batch = []
 
@@ -82,35 +81,33 @@ try:
         try:
             record = message.value
 
-            # Walidacja i uzupełnienie brakujących pól
             if not validate_record(record):
                 continue
 
-            # Transformacja: dodaj timestamp przetwarzania (UTC)
             record['processing_timestamp'] = datetime.now(timezone.utc).isoformat()
 
             data_batch.append(record)
-            print(f"📥 Odebrano rekord: {record.get('city')} | "
-                  f"{record.get('temperature')}°C | "
-                  f"Bufor: {len(data_batch)}/{BATCH_SIZE_THRESHOLD}")
+            print(
+                f"[RECEIVED] city={record.get('city')} | "
+                f"temp={record.get('temperature')}C | "
+                f"buffer={len(data_batch)}/{BATCH_SIZE_THRESHOLD}"
+            )
 
-            # Bulk insert po osiągnięciu progu
             if len(data_batch) >= BATCH_SIZE_THRESHOLD:
                 upload_batch(data_batch)
-                data_batch = []  # Reset bufora niezależnie od wyniku uploadu
+                data_batch = []
 
         except Exception as e:
-            print(f"❌ Błąd przetwarzania wiadomości: {type(e).__name__}: {e}")
+            print(f"[ERROR] Failed to process message: {type(e).__name__}: {e}")
             continue
 
 except KeyboardInterrupt:
-    print("\n⏹️  Zatrzymano przez użytkownika.")
+    print("\n[STOP] Interrupted by user.")
 
 finally:
-    # Flush pozostałych danych w buforze przed zamknięciem
     if data_batch:
-        print(f"💾 Zapisuję pozostałe {len(data_batch)} rekordów z bufora...")
+        print(f"[FLUSH] Saving remaining {len(data_batch)} records from buffer...")
         upload_batch(data_batch)
 
     consumer.close()
-    print("--- Consumer zamknięty ---")
+    print("[STOP] Consumer closed.")

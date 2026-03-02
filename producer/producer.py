@@ -6,42 +6,46 @@ from kafka import KafkaProducer
 from dotenv import load_dotenv
 import os
 
-# Load configuration from .env file
 load_dotenv()
 
+# API
 API_KEY = os.getenv('OPENWEATHER_API_KEY')
+
+# Kafka
 BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
 TOPIC = os.getenv('KAFKA_TOPIC')
 
-# Initialize Kafka Producer – bardzo dobre ustawienia!
 producer = KafkaProducer(
     bootstrap_servers=BOOTSTRAP_SERVERS,
     value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-    acks='all',                    # pełna trwałość (przy 1 brokerze działa jak acks=1)
-    retries=10,                    # ile razy ponowić
-    request_timeout_ms=45000,      # 45 sekund
-    metadata_max_age_ms=300000,    # odświeżanie metadanych co 5 min
-    max_in_flight_requests_per_connection=5   # ← dodane: zapobiega kolejkowaniu
+    acks='all',
+    retries=10,
+    request_timeout_ms=45000,
+    metadata_max_age_ms=300000,
+    max_in_flight_requests_per_connection=5
 )
 
-# English city names
-cities = [
-    "Warsaw", "Krakow", "Lodz", "Wroclaw", "Poznan", 
+CITIES = [
+    "Warsaw", "Krakow", "Lodz", "Wroclaw", "Poznan",
     "Gdansk", "Szczecin", "Bydgoszcz", "Lublin", "Bialystok"
 ]
 
-print(f"--- Starting Weather Producer on topic: {TOPIC} ---")
+DELAY_BETWEEN_CITIES = 0.6   # seconds
+DELAY_BETWEEN_CYCLES = 60    # seconds
+
+print(f"[START] Weather producer listening on topic: '{TOPIC}'")
 
 while True:
-    for city in cities:
+    for city in CITIES:
         try:
-            # Construct API URL + timeout!
-            url = f"https://api.openweathermap.org/data/2.5/weather?q={city},PL&appid={API_KEY}&units=metric"
-            response = requests.get(url, timeout=10)   # ← ważne!
+            url = (
+                f"https://api.openweathermap.org/data/2.5/weather"
+                f"?q={city},PL&appid={API_KEY}&units=metric"
+            )
+            response = requests.get(url, timeout=10)
             data = response.json()
-            
+
             if response.status_code == 200:
-                # Bezpieczniejsze pobieranie danych
                 weather_payload = {
                     'city': city,
                     'temperature': data['main'].get('temp'),
@@ -52,22 +56,20 @@ while True:
                     'api_timestamp': datetime.fromtimestamp(data['dt']).isoformat() if data.get('dt') else None,
                     'ingestion_timestamp': datetime.now().isoformat()
                 }
-                
-                # Send to Kafka
-                producer.send(TOPIC, value=weather_payload)
-                print(f"✅ Sent data for {city}: {weather_payload['temperature']}°C")
-                
-            else:
-                print(f"❌ Error fetching data for {city}: {data.get('message', 'Unknown error')}")
-                
-        except requests.exceptions.Timeout:
-            print(f"⏰ Timeout for {city} – API nie odpowiedziało")
-        except Exception as e:
-            print(f"❌ Exception for {city}: {type(e).__name__}: {e}")
-        
-        time.sleep(0.6)  # ← mała przerwa między miastami (6 sekund na 10 miast)
 
-    # Zapewniamy, że wszystkie wiadomości zostały wysłane
+                producer.send(TOPIC, value=weather_payload)
+                print(f"[SENT] city={city} | temp={weather_payload['temperature']}C")
+
+            else:
+                print(f"[ERROR] Failed to fetch data for {city}: {data.get('message', 'Unknown error')}")
+
+        except requests.exceptions.Timeout:
+            print(f"[TIMEOUT] No response from API for city: {city}")
+        except Exception as e:
+            print(f"[ERROR] Exception for {city}: {type(e).__name__}: {e}")
+
+        time.sleep(DELAY_BETWEEN_CITIES)
+
     producer.flush()
-    print("--- Cycle complete. Waiting 60 seconds... ---")
-    time.sleep(60)
+    print(f"[CYCLE] Complete. Waiting {DELAY_BETWEEN_CYCLES} seconds...")
+    time.sleep(DELAY_BETWEEN_CYCLES)
