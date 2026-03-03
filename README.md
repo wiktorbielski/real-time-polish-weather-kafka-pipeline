@@ -160,3 +160,15 @@ FROM `your-project-id.weather_dataset.raw_weather`
 ORDER BY ingestion_timestamp DESC
 LIMIT 10
 ```
+
+## Looker Studio Dashboard – Key Visualizations  
+(All charts based on data collected 2 March 2026, 14:00–22:00)
+
+| Name                                      | Description                                                                 | Dashboard                                                                 |
+|-------------------------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| Hourly Temperature Trend by City          | Line chart showing hourly average, min and max temperatures per city (2 Mar 2026, 14–22). Highlights short-term changes and evening cooling patterns. | ![Hourly Temperature Trend by City](dashboards/hourly-temperature-trend-by-city.png) |
+| Weather Condition Distribution by City    | Shows frequency and % of weather types (Clear, Clouds, Rain etc.) per city during the 8-hour evening window on 2 Mar 2026. | ![Weather Condition Distribution by City](dashboards/weather-condition-distribution-by-city.png) |
+| City Temperature Rankings                 | Ranks Polish cities by average temperature (with min/max and range) based on data from 2 Mar 2026, 14:00–22:00. | ![City Temperature Rankings](dashboards/city-temperature-rankings.png)   |
+| Wind Speed & Intensity by City            | Displays average & max wind speed per city with intensity categories for the evening hours of 2 March 2026. | ![Wind Speed & Intensity by City](dashboards/wind-speed-intensity-by-city.png) |
+| Temperature vs. Humidity Correlation by City | Scatter plot of hourly temperature vs humidity (colored by humidity level) for 2 Mar 2026, 14–22, showing comfort conditions. | ![Temperature vs. Humidity Correlation by City](dashboards/temperature-humidity-orrelation-by-city.png) ||
+
