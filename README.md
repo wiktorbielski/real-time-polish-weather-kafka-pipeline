@@ -98,6 +98,60 @@ cp .env.example .env
 - KAFKA_TOPIC=weather_data
 
 ### Step 3 – Start Kafka (and optionally Kafka UI)
+
+3a. Start the Kafka broker
 ```bash
 docker compose up -d
+```
+Create the topic:
+```bash
+Bashdocker exec kafka-broker kafka-topics.sh --create \
+  --topic weather_data \
+  --bootstrap-server localhost:9092 \
+  --partitions 3 \
+  --replication-factor 1
+```
+
+Quality check: Quick check:
+```bash
+docker ps   # → you should see kafka-broker running
+```
+
+3b. Add Kafka UI for easy monitoring
+Edit your existing docker-compose.yml and add this service at the end:
+```yaml
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+```
+
+→ Open in browser: http://localhost:8080
+
+### Step 4 – Prepare Python environment & install dependencies
+```bash
+# Create and activate virtual environment (highly recommended)
+python -m venv .venv
+Windows:   .venv\Scripts\activate
+# Install packages
+pip install -r requirements.txt
+```
+
+
+      
+### Step 5 – Launch the Producer (fetches weather data)
+```bash
+python producer/producer.py
+```
+
+Step 6 – Launch the Consumer (processes & loads to BigQuery)
+```bash
+python consumer/consumer.py
 ```
