@@ -28,28 +28,16 @@ sequenceDiagram
     BQ-->>Looker: results
 ```
 
-## Overview
+## Project Overview
 
-This portfolio project shows a clean, end-to-end **streaming / near-real-time ETL pipeline**:
+This portfolio project demonstrates a clean, end-to-end **near-real-time streaming ETL pipeline** for monitoring current weather in Poland's 10 largest cities.
 
-- Fetches current weather data every ~60 seconds from OpenWeatherMap API for 10 major Polish cities  
-- Publishes events to Apache Kafka (local KRaft mode)  
-- Python consumer reads, validates, lightly transforms and batches records  
-- Loads data into Google BigQuery (free tier friendly)  
-- Looker Studio dashboard visualizes live trends and current conditions
-
-Perfect demonstration of real-time ingestion, decoupling with Kafka, Python processing and serverless analytics.
-
-## Features
-
-- Near-real-time refresh (~60-second interval)  
-- Simple data quality / validation in consumer  
-- Batch loading to BigQuery to respect free tier costs  
-- At-least-once delivery (idempotent inserts possible in future)  
-- Easy-to-extend Looker Studio dashboard
-
-## Architecture
-
+### What it does
+- Fetches live weather data every ~60 seconds from the OpenWeatherMap API (temperature, humidity, wind, conditions, etc.)  
+- Publishes structured JSON events to **Apache Kafka** (running locally in single-node KRaft mode)  
+- A Python consumer continuously reads from Kafka, performs lightweight validation & transformation, and batches records  
+- Loads clean batches into **Google BigQuery** (optimized for free tier limits)  
+- Enables quick visualization of trends and current conditions in a **Looker Studio** dashboard
 
 ## Technologies & Rationale
 
@@ -75,34 +63,35 @@ Before starting:
   - BigQuery Job User
 - Free **OpenWeatherMap API key** → [Sign up here](https://home.openweathermap.org/users/sign_up)
 
-### Step 1 – Clone the repository
+## Step 1 – Clone the repository
 ```bash
 git clone https://github.com/YOUR_USERNAME/real-time-polish-weather-kafka-pipeline.git
 cd real-time-polish-weather-kafka-pipeline
 ```
 
-
-### Step 2 – Set up environment variables
+## Step 2 – Set up environment variables
 ```bash
 cp .env.example .env
 ```
-## Required: OpenWeatherMap
+### Open .env in your editor and fill in:
+#### Required: OpenWeatherMap
 - OPENWEATHER_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-## Required: Google Cloud
+#### Required: Google Cloud
 - GCP_PROJECT_ID=your-project-id-123456
 - GCP_SERVICE_ACCOUNT_KEY_PATH=/full/absolute/path/to/your-service-account-key.json
 
-## Kafka (local) 
+#### Kafka (local) 
 - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 - KAFKA_TOPIC=weather_data
 
-### Step 3 – Start Kafka (and optionally Kafka UI)
+## Step 3 – Start Kafka (and optionally Kafka UI)
 
-3a. Start the Kafka broker
+## 3a. Start the Kafka broker
 ```bash
 docker compose up -d
 ```
+### Wait ~20–40 seconds for startup.
 Create the topic:
 ```bash
 Bashdocker exec kafka-broker kafka-topics.sh --create \
@@ -112,12 +101,12 @@ Bashdocker exec kafka-broker kafka-topics.sh --create \
   --replication-factor 1
 ```
 
-Quality check: Quick check:
+### Quick check:
 ```bash
 docker ps   # → you should see kafka-broker running
 ```
 
-3b. Add Kafka UI for easy monitoring
+## 3b. Add Kafka UI for easy monitoring
 Edit your existing docker-compose.yml and add this service at the end:
 ```yaml
   kafka-ui:
@@ -132,10 +121,14 @@ Edit your existing docker-compose.yml and add this service at the end:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: 'true'
 ```
+### Then restart:
+```bash
+docker compose up -d
 
-→ Open in browser: http://localhost:8080
+```
+### Open in browser: http://localhost:8080
 
-### Step 4 – Prepare Python environment & install dependencies
+## Step 4 – Prepare Python environment & install dependencies
 ```bash
 # Create and activate virtual environment (highly recommended)
 python -m venv .venv
@@ -144,14 +137,26 @@ Windows:   .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-
-      
-### Step 5 – Launch the Producer (fetches weather data)
+## Step 5 – Launch the Producer (fetches weather data)
+### Open a new terminal, go to project folder and run:
 ```bash
 python producer/producer.py
 ```
-
-Step 6 – Launch the Consumer (processes & loads to BigQuery)
+## Step 6 – Launch the Consumer (processes & loads to BigQuery)
+### Open another terminal, go to project folder and run:
 ```bash
 python consumer/consumer.py
+```
+
+## Step 7 – Verify everything works
+- Kafka UI (if added): http://localhost:8080 → check weather_data topic for incoming messages
+- BigQuery: Go to https://console.cloud.google.com/bigquery
+- 
+Run this query (replace your-project-id):
+
+```sql
+SELECT *
+FROM `your-project-id.weather_dataset.raw_weather`
+ORDER BY ingestion_timestamp DESC
+LIMIT 10
 ```
