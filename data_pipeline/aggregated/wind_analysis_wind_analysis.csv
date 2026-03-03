@@ -1,0 +1,11 @@
+city,avg_wind_speed,max_wind_speed,wind_category
+Warsaw,3.35,5.66,Light Breeze
+Krakow,1.43,2.57,Calm
+Lodz,2.44,5.14,Calm
+Wroclaw,2.45,3.6,Calm
+Poznan,2.68,5.66,Calm
+Gdansk,2.69,4.63,Calm
+Szczecin,2.51,3.13,Calm
+Bydgoszcz,3.15,7.72,Light Breeze
+Lublin,4.2,6.71,Light Breeze
+Bialystok,2.09,4.92,Calm
