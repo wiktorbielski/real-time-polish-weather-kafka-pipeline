@@ -36,32 +36,32 @@ This portfolio project demonstrates a clean, end-to-end **near-real-time streami
 - Fetches live weather data every ~60 seconds from the OpenWeatherMap API (temperature, humidity, wind, conditions, etc.)  
 - Publishes structured JSON events to **Apache Kafka** (running locally in single-node KRaft mode)  
 - A Python consumer continuously reads from Kafka, performs lightweight validation & transformation, and batches records  
-- Loads clean batches into **Google BigQuery** (optimized for free tier limits)  
-- Enables quick visualization of trends and current conditions in a **Looker Studio** dashboard
+- Loads clean batches into **Google BigQuery**
+- Enables quick visualization of trends and current conditions in a **Looker Studio** dashboards
 
 ## Technologies & Rationale
 
 | Layer                  | Technology                          | Why chosen                                                                 |
 |------------------------|-------------------------------------|----------------------------------------------------------------------------|
-| Streaming broker       | Apache Kafka (KRaft mode)           | De-facto standard for event streaming & decoupling producers/consumers     |
+| Streaming broker       | Apache Kafka (KRaft mode)           | Standard for event streaming & decoupling producers/consumers              |
 | Ingestion              | Python + `requests`                 | Lightweight, no heavy frameworks needed                                    |
 | Serialization          | JSON                                | Readable, debug-friendly, sufficient for low-volume streaming              |
 | Processing & Sink      | Python + `google-cloud-bigquery`    | Native GCP client, simple & reliable batch inserts                         |
-| Storage & Query        | Google BigQuery                     | Serverless, 1 TB free queries + 10 GB storage/month – ideal for portfolio  |
-| Visualization          | Looker Studio                       | Free, native BigQuery integration, beautiful dashboards in minutes         |
+| Storage & Query        | Google BigQuery                     | Serverless, 1 TB free queries + 10 GB storage/month                        |
+| Visualization          | Looker Studio                       | Native BigQuery integration                                                |
 | Local Infra & Dev      | Docker Compose + VS Code            | Zero-cost, reproducible local development environment                      |
 
 ## How to Run – Step-by-Step (One-Window Guide)
 
 ### Prerequisites
 Before starting:
-- **Docker** + **Docker Compose** installed
-- **Python 3.9+** (strongly recommended: use a virtual environment)
-- Google Cloud project with **BigQuery API** enabled
+- **Docker** + **Docker Compose**
+- **Python 3.9+**
+- Google Cloud project with **BigQuery API**
 - Service Account JSON key with roles:
   - BigQuery Data Editor
   - BigQuery Job User
-- Free **OpenWeatherMap API key** → [Sign up here](https://home.openweathermap.org/users/sign_up)
+- **OpenWeatherMap API key** → [Sign up here](https://home.openweathermap.org/users/sign_up)
 
 ## Step 1 – Clone the repository
 ```bash
@@ -87,12 +87,11 @@ cp .env.example .env
 
 ## Step 3 – Start Kafka (and optionally Kafka UI)
 
-## 3a. Start the Kafka broker
+### 3a. Start the Kafka broker
 ```bash
 docker compose up -d
 ```
-### Wait ~20–40 seconds for startup.
-Create the topic:
+#### Create the topic:
 ```bash
 Bashdocker exec kafka-broker kafka-topics.sh --create \
   --topic weather_data \
@@ -101,12 +100,12 @@ Bashdocker exec kafka-broker kafka-topics.sh --create \
   --replication-factor 1
 ```
 
-### Quick check:
+#### Quick check:
 ```bash
 docker ps   # → you should see kafka-broker running
 ```
 
-## 3b. Add Kafka UI for easy monitoring
+### 3b. Add Kafka UI for easy monitoring
 Edit your existing docker-compose.yml and add this service at the end:
 ```yaml
   kafka-ui:
@@ -121,29 +120,29 @@ Edit your existing docker-compose.yml and add this service at the end:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: 'true'
 ```
-### Then restart:
+#### Then restart:
 ```bash
 docker compose up -d
 
 ```
-### Open in browser: http://localhost:8080
+#### Open in browser: http://localhost:8080
 
 ## Step 4 – Prepare Python environment & install dependencies
 ```bash
-# Create and activate virtual environment (highly recommended)
+# Create and activate virtual environment
 python -m venv .venv
-Windows:   .venv\Scripts\activate
+Windows: .venv\Scripts\activate
 # Install packages
 pip install -r requirements.txt
 ```
 
 ## Step 5 – Launch the Producer (fetches weather data)
-### Open a new terminal, go to project folder and run:
+#### Open a new terminal, go to project folder and run:
 ```bash
 python producer/producer.py
 ```
 ## Step 6 – Launch the Consumer (processes & loads to BigQuery)
-### Open another terminal, go to project folder and run:
+#### Open another terminal, go to project folder and run:
 ```bash
 python consumer/consumer.py
 ```
@@ -151,7 +150,6 @@ python consumer/consumer.py
 ## Step 7 – Verify everything works
 - Kafka UI (if added): http://localhost:8080 → check weather_data topic for incoming messages
 - BigQuery: Go to https://console.cloud.google.com/bigquery
-- 
 Run this query (replace your-project-id):
 
 ```sql
@@ -171,4 +169,5 @@ LIMIT 10
 | City Temperature Rankings                 | Ranks Polish cities by average temperature (with min/max and range) based on data from 2 Mar 2026, 14:00–22:00. | ![City Temperature Rankings](dashboards/city-temperature-rankings.png)   |
 | Wind Speed & Intensity by City            | Displays average & max wind speed per city with intensity categories for the evening hours of 2 March 2026. | ![Wind Speed & Intensity by City](dashboards/wind-speed-intensity-by-city.png) |
 | Temperature vs. Humidity Correlation by City | Scatter plot of hourly temperature vs humidity (colored by humidity level) for 2 Mar 2026, 14–22, showing comfort conditions. | ![Temperature vs. Humidity Correlation by City](dashboards/temperature-humidity-orrelation-by-city.png) ||
+
 
