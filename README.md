@@ -1,4 +1,4 @@
-# Real-Time Polish Weather Data Pipeline
+# 🌦️ Real-Time Polish Weather Data Pipeline
 
 **Near real-time weather monitoring for Poland's 10 largest cities**  
 using Apache Kafka, Python streaming ETL, Google BigQuery & Looker Studio.
@@ -28,18 +28,18 @@ sequenceDiagram
     BQ-->>Looker: results
 ```
 
-## Project Overview
+## 📖 Project Overview
 
 This portfolio project demonstrates a clean, end-to-end **near-real-time streaming ETL pipeline** for monitoring current weather in Poland's 10 largest cities.
 
-### What it does
+### ✨ What it does
 - Fetches live weather data every ~60 seconds from the OpenWeatherMap API (temperature, humidity, wind, conditions, etc.)  
 - Publishes structured JSON events to **Apache Kafka** (running locally in single-node KRaft mode)  
 - A Python consumer continuously reads from Kafka, performs lightweight validation & transformation, and batches records  
 - Loads clean batches into **Google BigQuery**
 - Enables quick visualization of trends and current conditions in a **Looker Studio** dashboards
 
-## Technologies & Rationale
+## 💡 Technologies & Rationale
 
 | Layer                  | Technology                          | Why chosen                                                                 |
 |------------------------|-------------------------------------|----------------------------------------------------------------------------|
@@ -51,7 +51,7 @@ This portfolio project demonstrates a clean, end-to-end **near-real-time streami
 | Visualization          | Looker Studio                       | Native BigQuery integration                                                |
 | Local Infra & Dev      | Docker Compose + VS Code            | Zero-cost, reproducible local development environment                      |
 
-## How to Run – Step-by-Step (One-Window Guide)
+## 🚀 How to Run – Step-by-Step (One-Window Guide)
 
 ### Prerequisites
 Before starting:
@@ -159,7 +159,7 @@ ORDER BY ingestion_timestamp DESC
 LIMIT 10
 ```
 
-## Looker Studio Dashboard – Key Visualizations  
+## 📂 Looker Studio Dashboard – Key Visualizations  
 (All charts based on data collected 2 March 2026, 14:00–22:00)
 
 | Name                                      | Description                                                                 | Dashboard                                                                 |
